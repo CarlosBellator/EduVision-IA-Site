@@ -63,8 +63,9 @@ def cadastro(request):
     if request.method == 'POST':
         form = CadastroForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect('login')
+            usuario = form.save()
+            auth.login(request, usuario)
+            return redirect('home')
         else:
             for field, errors in form.errors.items():
                 for error in errors:

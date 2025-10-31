@@ -963,6 +963,9 @@ a {
 .header-mobile {
     padding-top: 10vh;
 }
+.cadastro-header-mobile {
+    padding-top: 5vh;
+}
 
 .header-mobile h1 {
     font-family: "Anta", regular;
