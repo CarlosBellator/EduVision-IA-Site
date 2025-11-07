@@ -899,6 +899,7 @@ a {
     border-top: 4px solid #2196F3;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    z-index: 1000000;
 }
 
 @keyframes spin {

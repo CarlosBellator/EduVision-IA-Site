@@ -176,7 +176,6 @@
 
             function displayFile(file) {
                 const uploadBox = document.querySelector('.upload-box');
-                
                 // Se for uma string (caminho de arquivo), exibir diretamente
                 if (typeof file === 'string') {
                     uploadBox.innerHTML = `
@@ -191,16 +190,30 @@
                     const reader = new FileReader();
 
                     reader.onload = function (e) {
-                        // Remover conteúdo atual da upload-box
-                        const currentContent = uploadBox.innerHTML;
+                        // Remover <p> e <input>, mas manter o upload-progress
+                        const progressIndicator = uploadBox.querySelector('.upload-progress');
+                        const paragraph = uploadBox.querySelector('p:not(.upload-progress p)');
+                        const fileInput = uploadBox.querySelector('#file-input');
+                        
+                        if (paragraph) paragraph.remove();
+                        if (fileInput) fileInput.remove();
+
+                        // Remover preview anterior se existir
+                        const existingPreview = uploadBox.querySelector('.file-preview');
+                        if (existingPreview) {
+                            existingPreview.remove();
+                        }
 
                         // Criar elemento de preview
-                        uploadBox.innerHTML = `
-                <div class="file-preview">
-                    <img src="${e.target.result}" alt="Preview" class="preview-image">
-                    <button type="button" class="remove-file" onclick="removeFile()">x</button>
-                </div>
-            `;
+                        const previewDiv = document.createElement('div');
+                        previewDiv.className = 'file-preview';
+                        previewDiv.innerHTML = `
+                            <img src="${e.target.result}" alt="Preview" class="preview-image">
+                            <button type="button" class="remove-file" onclick="removeFile()">x</button>
+                        `;
+                        
+                        // Adicionar preview ao uploadBox
+                        uploadBox.appendChild(previewDiv);
 
                         // Adicionar classe para estilização
                         uploadBox.classList.add('has-file');
@@ -232,8 +245,6 @@
                 })
                     .then(response => response.json())
                     .then(data => {
-                        hideProcessingProgress();
-
                         if (data.success) {
                             console.log('Upload realizado com sucesso:', data);
                             if (data.variaveis) {
@@ -243,20 +254,21 @@
                                 showAlert('Não foi encontrado nenhum gráfico na imagem. Tente outro arquivo ou digite os valores do gráfico.', 'error');
                             } else {
                                 const graphsContainer = document.querySelector('.graphs-preview-modal .modal-content .graphs-preview');
-                                    document.querySelector('.graphs-preview-modal').style.display = 'block';
-                                    graphsContainer.innerHTML = ''; // Limpar conteúdo anterior
+                                document.querySelector('.graphs-preview-modal').style.display = 'block';
+                                graphsContainer.innerHTML = ''; // Limpar conteúdo anterior
                                 imagesHtml = '';
                                 for (let i = 0; i < data.graphs_list.length; i++) {
                                     imagesHtml += `<img src="${data.graphs_list[i]}" alt="Preview" id="${data.file_name[i]}" onclick="processGraph('${data.graphs_list[i]}')">`;
                                 }
                                 graphsContainer.innerHTML = `${imagesHtml} `;
                             }
-
+                            
                         } else {
                             console.error('Erro no upload:', data.error);
                             showAlert(data.error);
                             removeFile(); // Remover preview se houver erro
                         }
+                        hideProcessingProgress();
                     })
                     .catch(error => {
                         hideProcessingProgress();
@@ -268,14 +280,17 @@
 
             window.showProcessingProgress = function() {
                 // Adicionar indicador de carregamento
+                console.log('Mostrando progresso de processamento...');
                 const uploadBox = document.querySelector('.upload-box');
+                console.log(uploadBox);
                 const progressIndicator = document.createElement('div');
                 progressIndicator.className = 'upload-progress';
                 progressIndicator.innerHTML = `
-            <div class="spinner"></div>
-            <p>Processando...</p>
-        `;
+                <div class="spinner"></div>
+                <p>Processando...</p>
+                `;
                 uploadBox.appendChild(progressIndicator);
+                console.log(uploadBox);
             }
 
             window.hideProcessingProgress = function() {
