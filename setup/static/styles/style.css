@@ -887,7 +887,7 @@ a {
     width: 100%;
     height: 100%;
     background-color: rgba(168, 186, 241, 0.9);
-    border-radius: 20px;
+    border-radius: 15px;
     justify-content: center;
     z-index: 10;
 }
