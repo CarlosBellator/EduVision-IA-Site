@@ -11,6 +11,17 @@
     </header>
     <div class="processing-progress">
     </div>
+    <div class="modal" id="about-modal" class="about-mobile">
+        <div class="modal-content">
+            <div class="modal-header">Sobre o EduVision IA
+                <span class="close" onclick="closeAbout()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Conforme as crescentes discussões sobre ensino inclusivo e problemas de acessibilidade no educação de pessoas deficientes visuais, nosso grupo decidiu desenvolver um projeto para auxiliar no estudo desses indivíduos. O EduVision IA tem como objetivo a criação de um sistema interligado que colabore com o aprendizado desses alunos cegos e de baixa visão, por meio de Inteligência Artificial e Impressão 3D. A ferramenta é capaz de analisar imagens de gráficos de cinemática de Física, retornando os valores do gráfico e permitindo sua alteração, também tendo a função de digitar os valores diretamente. Com isso, o sistema realiza a conversão para um modelo 3D em Braille, tornando possível exportar esse modelo e enviá-lo para impressão em uma impressora 3D, gerando um gráfico tátil que pode servir de auxílio no estudo desses indivíduos com necessidades especiais</p>
+                <p><strong>Desenvolvido por:</strong> Arhur; Carlos; Pedro</p>
+            </div>
+        </div>
+    </div>
     <!-- Modal de selção de gráfico-->
     <div class="graphs-preview-modal-mobile" id="graphs-preview-modal-mobile">
         <div class="modal-content">
@@ -156,6 +167,7 @@
             </div>
         </section>
     </main>
+    <p id="about" class="about-mobile" onclick="openAbout()">sobre</p>
     <script>
     function uploadFile(file) {
             // Implementação da lógica de upload para o Django

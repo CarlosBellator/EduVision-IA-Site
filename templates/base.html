@@ -7,6 +7,17 @@
     <title>EduVision IA</title>
     <link rel="stylesheet" href="{% static 'styles/style.css' %}">
     <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+    <script>
+        function openAbout() {
+            document.getElementById('about-modal').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Previne scroll da página
+        }
+        
+        function closeAbout() {
+            document.getElementById('about-modal').style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restaura scroll da página
+        }
+    </script>
 </head>
 <body>
     {% block content %}
