@@ -23,7 +23,7 @@ if not api_key:
     )
 
 genai.configure(api_key=api_key)
-MODEL_ID = "models/gemini-flash-latest"
+MODEL_ID = "models/gemini-3-pro-preview"
 model = genai.GenerativeModel(MODEL_ID)
 
 # Configura pasta de saída de resultados dos gráficos encontrados na imagem
