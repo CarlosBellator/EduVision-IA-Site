@@ -1,5 +1,4 @@
 print('Iniciando...')
-import cv2 # Processamento e manipulação de imagens 
 import os # Operações com o sistema operacional
 import requests # Faz requisição na API para identificar os graficos na imagem
 from PIL import Image # Prepara imagens para o Gemini
@@ -92,7 +91,8 @@ def import_img(caminho=None):
 
     image_path = caminho
     if (os.path.exists(image_path)):
-        image = cv2.imread(image_path)
+        # Usar Pillow para carregar a imagem (compatível com servidores/headless)
+        image = Image.open(image_path).convert("RGB")
         nome_arquivo = os.path.basename(image_path)  # Extrai apenas o nome do arquivo
         nome_arquivo = os.path.splitext(nome_arquivo)[0]  # Retmove a extenção do arquivo ".png"
         return image, image_path, nome_arquivo
@@ -147,7 +147,7 @@ def cut_image(image, image_path, nome_arquivo):
         print("Nenhuma detecção retornada pela API.")
         return graph_list
 
-    # Faz o recorte dos gráficos
+    # Faz o recorte dos gráficos usando Pillow
     for i, box in enumerate(detections):
         if isinstance(box, dict):
             bbox = box.get("box", box.get("bbox", box))
@@ -158,11 +158,26 @@ def cut_image(image, image_path, nome_arquivo):
         else:
             print(f"Formato de detecção não suportado: {box}")
             continue
-        cropped = image[y1:y2, x1:x2]
+
+        # Ajusta coordenadas para os limites da imagem
+        width, height = image.size
+        x1 = max(0, min(x1, width))
+        x2 = max(0, min(x2, width))
+        y1 = max(0, min(y1, height))
+        y2 = max(0, min(y2, height))
+
+        if x2 <= x1 or y2 <= y1:
+            print(f"Coordenadas inválidas para caixa: {bbox}")
+            continue
+
+        cropped = image.crop((x1, y1, x2, y2))
         output_path = os.path.join(output_folder, f"{nome_arquivo}-Grafico_{i+1}.jpg")
-        cv2.imwrite(output_path, cropped)
-        graph_list.append(output_path)
-    print(f"* {i} gráficos foram encontrados e salvos em {output_folder}")
+        try:
+            cropped.save(output_path, format="JPEG")
+            graph_list.append(output_path)
+        except Exception as e:
+            print(f"Erro ao salvar recorte: {e}")
+    print(f"* {len(graph_list)} gráficos foram encontrados e salvos em {output_folder}")
     return graph_list
 
 def deletar_grafico():

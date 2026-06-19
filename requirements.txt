@@ -4,6 +4,11 @@ pillow==11.3.0
 python-dotenv==1.1.1
 sqlparse==0.5.3
 tzdata==2025.2
+triangle
+numpy
+shapely
+trimesh
+google-generativeai
 numpy
 shapely
 trimesh
