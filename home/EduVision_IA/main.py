@@ -1,7 +1,7 @@
 print('Iniciando...')
 import cv2 # Processamento e manipulação de imagens 
 import os # Operações com o sistema operacional
-from ultralytics import YOLO
+import requests # Faz requisição na API para identificar os graficos na imagem
 from PIL import Image # Prepara imagens para o Gemini
 import google.generativeai as genai # Uso temporáio do gemini para detecção dos valores dos gráficos
 from home.EduVision_IA.graph_creator import graficoobj # Importa .py de criação de graficos 3D
@@ -13,6 +13,22 @@ try:
 except ImportError:
     pass  # python-dotenv não está instalado, usar apenas variáveis de ambiente do sistema
 
+# URL da API
+url = "https://carlosbellator-eduvision-ia-api.hf.space/detectar-grafico/"
+
+# Configurar Autorização da API
+AUTHORIZATION_API = os.getenv('AUTHORIZATION_API')
+if not AUTHORIZATION_API:
+    raise ValueError(
+        "AUTHORIZATION_API não encontrada!\n"
+        "Configure a variável de ambiente ou crie um arquivo .env\n"
+        "Veja o README.md para instruções detalhadas."
+    )
+
+headers = {
+    "Authorization": "Bearer " + AUTHORIZATION_API
+}
+
 # Configurar API key do Google Generative AI
 api_key = os.getenv('GOOGLE_API_KEY')
 if not api_key:
@@ -23,7 +39,7 @@ if not api_key:
     )
 
 genai.configure(api_key=api_key)
-MODEL_ID = "models/gemini-3-pro-preview"
+MODEL_ID = "models/gemini-3.5-flash"
 model = genai.GenerativeModel(MODEL_ID)
 
 # Configura pasta de saída de resultados dos gráficos encontrados na imagem
@@ -63,7 +79,7 @@ def menu():
 ''')
     return 
 
-def import_img(caminho):
+def import_img(caminho=None):
     '''
     Essa função é responsável por verificar e importar a imagem para análise.
     Inputs: Caminho da imagem.
@@ -71,18 +87,21 @@ def import_img(caminho):
             - Nome_do_arquivo.
     '''
     
+    if caminho is None:
+        caminho = input('Digite o caminho da imagem: ').strip()
+
     image_path = caminho
     if (os.path.exists(image_path)):
         image = cv2.imread(image_path)
         nome_arquivo = os.path.basename(image_path)  # Extrai apenas o nome do arquivo
         nome_arquivo = os.path.splitext(nome_arquivo)[0]  # Retmove a extenção do arquivo ".png"
-        return image, nome_arquivo
+        return image, image_path, nome_arquivo
     else:
         start()
         print('Caminho não existe! \n')
         return import_img()
 
-def cut_image(image, nome_arquivo):
+def cut_image(image, image_path, nome_arquivo):
     '''
     Essa função é responsável por buscar os elementos(Enuniados e Gráficos) na imagem e fazer o recorte dos gráficos.
     Inputs: - Imagem
@@ -90,28 +109,60 @@ def cut_image(image, nome_arquivo):
     Output: Salva os recortes dos gráficos.
     '''
     print('Buscando gráficos na imagem... \n')
-    model = YOLO("./home/EduVision_IA/MLs/ML1.pt")
-    # Faz a analise com a ML e armazena os resultados em results
-    results = model(image)
-    result = results[0] # Define como result, os retornos com a tag 0, ou seja a tag de gráfico, enquanto a tag 1 são os enunciados
-    graph_counter = 0 
     graph_list = [] # Lista para armazenar os gráficos encontrados
+    response = None
+    try:
+        with open(image_path, "rb") as image_file:
+            files = {"file": image_file}
+            response = requests.post(url, headers=headers, files=files)
+    except Exception as e:
+        print(f"Erro na requisição: {e}")
+        return graph_list
+
+    if response is None:
+        return graph_list
+
+    response_data = None
+    if response.status_code == 200:
+        response_data = response.json()
+        print(response_data)
+    else:
+        print(f"Erro {response.status_code}: {response.text}")
+
+    detections = []
+    if isinstance(response_data, dict):
+        detections = (
+            response_data.get("results")
+            or response_data.get("boxes")
+            or response_data.get("detections")
+            or response_data.get("predictions")
+            or []
+        )
+    elif isinstance(response_data, list):
+        detections = response_data
+    else:
+        print(f"Formato de resposta não suportado: {type(response_data).__name__}")
+
+    if not detections:
+        print("Nenhuma detecção retornada pela API.")
+        return graph_list
+
     # Faz o recorte dos gráficos
-    for i, box in enumerate(result.boxes):
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-        cls_id = int(box.cls[0])
-        label = model.names[cls_id]
-        if label == 'grafico':
-            conf = float(box.conf[0])
-            # Recorte do objeto
-            cropped = image[y1:y2, x1:x2]
-            # Criar nome de arquivo de saída
-            output_path = os.path.join(output_folder, f"{nome_arquivo}-Grafico_{graph_counter+1}.jpg")
-            # Salvar recorte
-            cv2.imwrite(output_path, cropped)
-            graph_counter += 1
-            graph_list.append(output_path)
-    print(f"* {graph_counter} gráficos foram encontrados e salvos em {output_folder}")
+    for i, box in enumerate(detections):
+        if isinstance(box, dict):
+            bbox = box.get("box", box.get("bbox", box))
+            x1 = int(bbox.get("x1", 0))
+            y1 = int(bbox.get("y1", 0))
+            x2 = int(bbox.get("x2", 0))
+            y2 = int(bbox.get("y2", 0))
+        else:
+            print(f"Formato de detecção não suportado: {box}")
+            continue
+        cropped = image[y1:y2, x1:x2]
+        output_path = os.path.join(output_folder, f"{nome_arquivo}-Grafico_{i+1}.jpg")
+        cv2.imwrite(output_path, cropped)
+        graph_list.append(output_path)
+    print(f"* {i} gráficos foram encontrados e salvos em {output_folder}")
     return graph_list
 
 def deletar_grafico():
@@ -279,7 +330,7 @@ def criar_modelo3d():
     if graph_path != None:
         graph_values = analise_grafico(graph_path)
         graph_values_dict = recortarVariaveis(graph_values)
-        graph_creator.graficoobj(graph_values_dict,graph_name,graph3d_output_folder)
+        graficoobj(graph_values_dict,graph_name,graph3d_output_folder)
         input('Pressione enter para voltar para o menu principal...')
         main()
     else:
@@ -292,8 +343,8 @@ def main():
         match opcao:
             case 1: # 1. Análisar uma imagem
                 start()
-                image, nome_arquivo = import_img()
-                cut_image(image, nome_arquivo)
+                image, image_path, nome_arquivo = import_img()
+                cut_image(image, image_path, nome_arquivo)
                 
             case 2: # 2. Listar gráficos
                 deletar_grafico()

@@ -81,8 +81,8 @@ def upload_file(request):
         with open(file_path, 'wb+') as destination:
             for chunk in uploaded_file.chunks():
                 destination.write(chunk)
-        image, nome_arquivo = import_img(file_path)
-        list_graphs = cut_image(image, nome_arquivo)
+        image, image_path, nome_arquivo = import_img(file_path)
+        list_graphs = cut_image(image, image_path, nome_arquivo)
         graph_counter = len(list_graphs)
         print(f'graph_counter: {graph_counter}')
         if graph_counter == 0:
