@@ -11,7 +11,7 @@ O **EduVision IA - Site** é a interface web do projeto EduVision, oferecendo um
 ## 🔧 Funcionalidades
 
 - **📤 Upload de Imagens**: Interface drag-and-drop para envio de imagens
-- **🔍 Detecção em Tempo Real**: Processamento automático de gráficos via YOLOv8
+- **🔍 Detecção em Tempo Real**: Processamento automático de gráficos via API remota
 - **🧠 Análise com IA**: Extração de dados usando Google Gemini AI
 - **📐 Geração de STL**: Download direto de modelos 3D táteis
 - **👤 Sistema de Contas**: Gerenciamento de usuários e histórico de conversões
@@ -104,6 +104,26 @@ pip install -r djangorequiriments.txt
    echo "GOOGLE_API_KEY=sua_chave_api_aqui" > .env
    ```
 
+### Configuração da API de Detecção
+
+1. **Definir a autorização**:
+   - Crie uma variável de ambiente chamada `AUTHORIZATION_API`
+   - O valor deve ser o token fornecido para acesso à API de detecção
+
+2. **Opcional: usar arquivo `.env`**:
+   ```bash
+   AUTHORIZATION_API=seu_token_aqui
+   GOOGLE_API_KEY=sua_chave_api_aqui
+   ```
+
+3. **Endpoint usado pelo sistema**:
+   ```text
+   https://carlosbellator-eduvision-ia-api.hf.space/detectar-grafico/
+   ```
+
+4. **Observação**:
+   - Não é necessário baixar nem treinar o modelo YOLO localmente
+
 ### Configuração do Banco de Dados
 
 ```bash
@@ -129,7 +149,7 @@ Acesse: `http://localhost:8000`
 
 1. **Criar Conta**: Registre-se na plataforma ou faça login
 2. **Upload**: Arraste e solte ou selecione uma imagem com gráficos
-3. **Detecção**: O sistema detecta automaticamente os gráficos
+3. **Detecção**: O sistema envia a imagem para a API e recupera os gráficos detectados
 4. **Análise**: Selecione o gráfico desejado para análise detalhada
 5. **Download**: Baixe o modelo STL gerado para impressão 3D
 
@@ -148,7 +168,7 @@ Acesse: `http://localhost:8000`
 - **🎯 Django**: Framework web Python
 - **🐍 Python**: Linguagem principal
 - **👁️ OpenCV**: Processamento de imagens
-- **🎯 YOLOv8 (Ultralytics)**: Detecção de objetos
+- **🌐 Requests**: Comunicação com a API de detecção
 - **🧠 Google Gemini AI**: Análise de gráficos
 - **📐 NumPy**: Computação numérica
 - **🎨 Trimesh**: Manipulação de malhas 3D
@@ -240,11 +260,15 @@ espacamento_relevos_linha = 0.4
    chmod -R 755 media/
    ```
 
-3. **Erro da API Google**:
+3. **Erro da API de detecção**:
+   - Verifique se `AUTHORIZATION_API` está configurada
+   - Confirme se a API remota está acessível
+
+4. **Erro da API Google**:
    - Verifique se `GOOGLE_API_KEY` está configurada
    - Confirme se a API Gemini está habilitada
 
-4. **Erro ao fazer upload**:
+5. **Erro ao fazer upload**:
    - Verifique o tamanho do arquivo (máx. 10MB)
    - Certifique-se que é uma imagem (JPG, PNG)
 
