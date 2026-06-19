@@ -68,7 +68,7 @@ def upload_file(request):
             }, status=400)
         
         # Criar diretório de uploads se não existir
-        upload_dir = os.path.join('media', 'temp', 'uploads')
+        upload_dir = os.path.join('/tmp','media', 'temp', 'uploads')
         os.makedirs(upload_dir, exist_ok=True)
         
         # Gerar nome único para o arquivo
@@ -193,7 +193,7 @@ def generate_graph(request):
 
         # Gerar o gráfico 3D
         unique_graph_name = f"{graph_name}_{uuid.uuid4()}"
-        graph_3d_path = graficoobj(graph_values, unique_graph_name, './media/Gráficos-3D/')
+        graph_3d_path = graficoobj(graph_values, unique_graph_name, '/tmp/media/Gráficos-3D/')
         
         # Processar o caminho do arquivo 3D para o Django
         # Remover './media/' ou 'media/' do início do caminho
