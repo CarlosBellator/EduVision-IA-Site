@@ -42,7 +42,7 @@ MODEL_ID = "models/gemini-3.5-flash"
 model = genai.GenerativeModel(MODEL_ID)
 
 # Configura pasta de saída de resultados dos gráficos encontrados na imagem
-output_folder = './media/temp/results/'
+output_folder = '/tmp/media/temp/results/'
 # Verifica se a pasta de saída existe, caso contrário, cria
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
