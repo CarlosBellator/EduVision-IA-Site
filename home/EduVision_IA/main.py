@@ -47,7 +47,7 @@ output_folder = '/tmp/media/temp/results/'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
  # Confiura a pasta de saída de resultados dos gráficos 3D
-graph3d_output_folder = './media/Gráficos-3D'
+graph3d_output_folder = '/tmp/media/Gráficos-3D'
 # Verifica se a pasta de saída existe, caso contrário, cria
 if not os.path.exists(graph3d_output_folder):
     os.makedirs(graph3d_output_folder)

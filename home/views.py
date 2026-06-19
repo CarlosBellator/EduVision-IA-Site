@@ -212,7 +212,7 @@ def generate_graph(request):
             relative_path = os.path.relpath(graph_image_path, 'media')
             
             # Criar diretório de graficos se não existir
-            graficos_dir = os.path.join('media', 'graficos')
+            graficos_dir = os.path.join('tmp', 'media', 'graficos')
             os.makedirs(graficos_dir, exist_ok=True)
             
             # Copiar arquivo para o diretório final
