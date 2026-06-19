@@ -6,9 +6,8 @@ sqlparse==0.5.3
 tzdata==2025.2
 opencv-python-headless==4.8.1.78
 triangle
-ultralytics
 numpy
 shapely
 trimesh
 google-generativeai
-python-dotenv
+request
