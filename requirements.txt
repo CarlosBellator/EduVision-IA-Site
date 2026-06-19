@@ -4,10 +4,14 @@ pillow==11.3.0
 python-dotenv==1.1.1
 sqlparse==0.5.3
 tzdata==2025.2
-opencv-python-headless==4.8.1.78
+opencv-python
 triangle
 numpy
 shapely
 trimesh
 google-generativeai
-request
+numpy
+shapely
+trimesh
+google-generativeai
+requests
