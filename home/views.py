@@ -225,11 +225,25 @@ def generate_graph(request):
         )
 
         # 1. Salvar e enviar a imagem para o Supabase Storage
-        if graph_image_path and os.path.exists(graph_image_path):
+        if graph_image_path and ';base64,' in graph_image_path:
+            # Separa o cabeçalho (data:image/jpeg) da imagem real em si
+            formato, imgstr = graph_image_path.split(';base64,')
+            # Extrai a extensão da imagem
+            extensao = formato.split('/')[-1]
+            final_filename = f"{unique_graph_name}.{extensao}"
+            
+            # Descodifica o texto Base64 de volta para dados binários de imagem
+            imagem_decodificada = base64.b64decode(imgstr)
+            
+            # Utiliza o ContentFile para criar um "ficheiro virtual em memória" 
+            # e guarda diretamente no Django Storages/Supabase
+            novo_grafico.imagem.save(final_filename, ContentFile(imagem_decodificada), save=False)
+            
+        elif graph_image_path and os.path.exists(graph_image_path):
+            # Lógica alternativa caso o frontend algum dia envie o caminho físico do ficheiro
             file_extension = os.path.splitext(graph_image_path)[1]
             final_filename = f"{unique_graph_name}{file_extension}"
             with open(graph_image_path, 'rb') as img_file:
-                # O File() aciona o django-storages para subir o arquivo para a nuvem
                 novo_grafico.imagem.save(final_filename, File(img_file), save=False)
         else:
             novo_grafico.imagem = 'graficos/default.png'
