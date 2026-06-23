@@ -260,8 +260,8 @@
                         if (data.success) {
                             console.log('Upload realizado com sucesso:', data);
                             if (data.variaveis) {
-                                displayFile(data.file_path);
-                                showSelectedGraph(data.file_path, data);
+                                displayFile(data.file_base64);
+                                showSelectedGraph(data.file_base64, data);
                             } else if (data.status == 422) {
                                 showAlert('Não foi encontrado nenhum gráfico na imagem. Tente outro arquivo ou digite os valores do gráfico.', 'error');
                             } else {
@@ -270,7 +270,7 @@
                                 graphsContainer.innerHTML = ''; // Limpar conteúdo anterior
                                 imagesHtml = '';
                                 for (let i = 0; i < data.graphs_list.length; i++) {
-                                    imagesHtml += `<img src="${data.graphs_list[i]}" alt="Preview" id="${data.file_name[i]}" onclick="processGraph('${data.graphs_list[i]}')">`;
+                                    imagesHtml += `<img src="${data.graphs_base64[i]}" alt="Preview" onclick="processGraph('${data.graphs_list[i]}', this.src)">`;
                                 }
                                 graphsContainer.innerHTML = `${imagesHtml} `;
                             }
@@ -360,8 +360,8 @@
           document.getElementById('graphs-preview-modal').style.display = 'none'
           document.body.style.overflow = 'auto' // Restaura scroll da página
         }
-    function processGraph(filePath) {
-        displayFile(filePath);
+    function processGraph(filePath, imageSrc) {
+        displayFile(imageSrc);
         // Fechar modal de pré-visualização
         closeGraphsPreviewModal();
         showProcessingProgress();
@@ -381,7 +381,7 @@
                 hideProcessingProgress();
                 if (data.success) {
                     console.log('Processamento realizado com sucesso:', data);
-                    showSelectedGraph(filePath, data);
+                    showSelectedGraph(imageSrc, data);
                     // Aqui você pode adicionar a lógica para exibir os dados processados
                 } else {
                     console.log('erro: ', data.error);  
@@ -461,7 +461,7 @@
                 y_unit: yUnit,
                 x_values: xValuesArray,
                 y_values: yValuesArray,
-                graph_image_path: currentGraphImagePath
+                graph_image_base64: currentGraphImagePath
             })
         })
         .then(response => response.json())

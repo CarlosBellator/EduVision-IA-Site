@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
-
+import dj_database_url
+from dotenv import load_dotenv
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,9 +25,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-aeoyl7ay@%6&9pkad+*s@b13^0qwhwo8wws#c(@=-@(hbhogp@'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['.vercel.app', 'localhost', '127.0.0.1','www.eduvision-ia.com.br']
 
 
 # Application definition
@@ -40,6 +42,7 @@ INSTALLED_APPS = [
     'contas',
     'home',
     'graficos',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -83,6 +86,44 @@ DATABASES = {
     }
 }
 
+# Em produção, a variável DATABASE_URL substitui a configuração local
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    DATABASES['default'] = dj_database_url.config(
+        default=database_url,
+        conn_max_age=600,  # Ajuda a manter as ligações abertas por breves momentos
+        ssl_require=True
+    )
+
+# Configurações do Supabase Storage
+if os.environ.get('DATABASE_URL'): # Se estiver em produção (Vercel)
+    AWS_ACCESS_KEY_ID = os.environ.get('SUPABASE_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('SUPABASE_SECRET_KEY')
+    AWS_STORAGE_BUCKET_NAME = 'media' # Nome do bucket que você criou
+    AWS_S3_ENDPOINT_URL = os.environ.get('SUPABASE_S3_ENDPOINT')
+    AWS_S3_REGION_NAME = os.environ.get('SUPABASE_REGION', 'sa-east-1')
+    
+        # === ADICIONE ESTAS 3 LINHAS AQUI ===
+    AWS_QUERYSTRING_AUTH = False     # Remove os códigos gigantes (?Signature=...) da URL
+    AWS_DEFAULT_ACL = 'public-read'  # Garante permissão de leitura nos arquivos
+    AWS_S3_ADDRESSING_STYLE = 'path' # Garante o formato correto de URL do Supabase
+    # ====================================
+
+    # === A SOLUÇÃO DEFINITIVA ===
+    # Força o Django a usar o link público oficial do Supabase para visualização/download
+    AWS_S3_CUSTOM_DOMAIN = f"yeqgxhwcumqqxxenwspn.supabase.co/storage/v1/object/public/{AWS_STORAGE_BUCKET_NAME}"
+    # ============================
+
+    # Define que arquivos de mídia (imagens) vão para o S3/Supabase
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        # Mantém arquivos estáticos (CSS/JS) no padrão
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

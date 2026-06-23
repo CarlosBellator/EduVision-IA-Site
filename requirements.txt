@@ -15,3 +15,7 @@ trimesh
 google-generativeai
 requests
 whitenoise
+psycopg2-binary
+dj-database-url
+django-storages
+boto3

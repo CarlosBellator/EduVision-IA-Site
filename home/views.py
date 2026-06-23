@@ -4,10 +4,14 @@ from django.shortcuts import redirect, render
 from django.http import JsonResponse, FileResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.core.files import File
+from django.core.files.base import ContentFile
 import json
 import os
 import shutil
 import mimetypes
+import base64
+import urllib.parse
 
 from contas.models import userProfile
 from home.EduVision_IA.main import import_img, cut_image, analise_grafico, recortarVariaveis
@@ -86,25 +90,41 @@ def upload_file(request):
         graph_counter = len(list_graphs)
         print(f'graph_counter: {graph_counter}')
         if graph_counter == 0:
-            return JsonResponse({
-                'success': False,
-                'error': 'Nenhum gráfico foi detectado na imagem enviada. Por favor, envie uma imagem clara de um gráfico.'
-            }, status=422)
+            return JsonResponse({'success': False, 'error': 'Nenhum gráfico foi detectado...'}, status=422)
         elif graph_counter == 1:
             graph_values_dict = process_graph(list_graphs[0])
+            try:
+                with open(list_graphs[0], "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    file_base64 = f"data:image/jpeg;base64,{encoded_string}"
+            except Exception as e:
+                print(f"Erro ao converter imagem: {e}")
+                file_base64 = ""
             return JsonResponse({
                 'success': True,
-                'message': 'Apenas um gráfico detectado e processado com sucesso.',
-                'file_path': list_graphs[0],
+                'message': 'Apenas um gráfico detectado...',
+                'file_path': file_base64,
                 'variaveis': graph_values_dict,
-                
             })
+            
+        graphs_base64 = []
+        for path in list_graphs:
+            try:
+                with open(path, "rb") as image_file:
+                    encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+                    # Adiciona o prefixo necessário para o HTML entender que é uma imagem
+                    graphs_base64.append(f"data:image/jpeg;base64,{encoded_string}")
+            except Exception as e:
+                print(f"Erro ao converter imagem: {e}")
+        # -----------------------------------------------------
+                
         return JsonResponse({
             'success': True,
             'message': 'Arquivo enviado com sucesso',
             'file_name': uploaded_file.name,
             'file_size': uploaded_file.size,
-            'graphs_list': list_graphs,
+            'graphs_list': list_graphs, # Mantém a lista original para usar depois
+            'graphs_base64': graphs_base64, # Nova lista com as imagens convertidas
             'graph_counter': graph_counter
         })
 
@@ -161,7 +181,7 @@ def generate_graph(request):
             'x_axis_label_text': data.get('x_unit'),
             'y_axis_label_text': data.get('y_unit')
         }
-        graph_image_path = data.get('graph_image_path')
+        graph_image_path = data.get('graph_image_base64')
         print(f'Caminho da imagem recebido: {graph_image_path}')
         graph_name = data.get('graph_name', 'Gráfico sem nome')
         graph_description = data.get('graph_description', '')
@@ -195,52 +215,36 @@ def generate_graph(request):
         unique_graph_name = f"{graph_name}_{uuid.uuid4()}"
         graph_3d_path = graficoobj(graph_values, unique_graph_name, '/tmp/media/Gráficos-3D/')
         
-        # Processar o caminho do arquivo 3D para o Django
-        # Remover './media/' ou 'media/' do início do caminho
-        if graph_3d_path:
-            graph_3d_path_relative = graph_3d_path.replace('./media/', '').replace('media/', '')
-            print(f'Caminho 3D processado: {graph_3d_path_relative}')
-        else:
-            graph_3d_path_relative = None
-        
-        # Processar a imagem se existir
-        imagem_final = None
-        if graph_image_path and os.path.exists(graph_image_path):
-            print(f'Imagem encontrada em: {graph_image_path}')
-            # Obter o caminho relativo a partir de 'media/'
-            # Ex: media/temp/uploads/arquivo.jpg -> temp/uploads/arquivo.jpg
-            relative_path = os.path.relpath(graph_image_path, 'media')
-            
-            # Criar diretório de graficos se não existir
-            graficos_dir = os.path.join('tmp', 'media', 'graficos')
-            os.makedirs(graficos_dir, exist_ok=True)
-            
-            # Copiar arquivo para o diretório final
-            file_extension = os.path.splitext(graph_image_path)[1]
-            final_filename = f"{unique_graph_name}{file_extension}"
-            final_path = os.path.join(graficos_dir, final_filename)
-            shutil.copy2(graph_image_path, final_path)
-            
-            # Caminho relativo para salvar no banco (sem 'media/')
-            imagem_final = f'graficos/{final_filename}'
-            print(f'Imagem do gráfico copiada de {graph_image_path} para: {final_path}')
-        else:
-            print(f'Imagem não encontrada ou caminho inválido: {graph_image_path}')
-        
-        print(f'Valor de imagem_final: {imagem_final}')
-        
-        # Criar registro do gráfico no banco de dados
-        print(f'Salvando gráfico com obj3d: {graph_3d_path_relative if graph_3d_path_relative else "objetos3d/default.obj"}')
-        novo_grafico = grafico.objects.create(
+        # Criar a estrutura do gráfico no banco de dados (ainda sem os arquivos)
+        novo_grafico = grafico(
             user=request.user,
             name=graph_name,
             descricao=graph_description,
             x_axis_label=x_axis_label_text,
             y_axis_label=y_axis_label_text,
-            imagem=imagem_final if imagem_final else 'graficos/default.png',
-            obj3d=graph_3d_path_relative if graph_3d_path_relative else 'objetos3d/default.obj'
         )
-        print(f'Gráfico salvo! ID: {novo_grafico.id}, obj3d salvo: {novo_grafico.obj3d}')
+
+        # 1. Salvar e enviar a imagem para o Supabase Storage
+        if graph_image_path and os.path.exists(graph_image_path):
+            file_extension = os.path.splitext(graph_image_path)[1]
+            final_filename = f"{unique_graph_name}{file_extension}"
+            with open(graph_image_path, 'rb') as img_file:
+                # O File() aciona o django-storages para subir o arquivo para a nuvem
+                novo_grafico.imagem.save(final_filename, File(img_file), save=False)
+        else:
+            novo_grafico.imagem = 'graficos/default.png'
+            
+        # 2. Salvar e enviar o arquivo 3D (.obj) para o Supabase Storage
+        if graph_3d_path and os.path.exists(graph_3d_path):
+            obj_extension = os.path.splitext(graph_3d_path)[1]
+            obj_filename = f"{unique_graph_name}{obj_extension}"
+            with open(graph_3d_path, 'rb') as obj_file:
+                novo_grafico.obj3d.save(obj_filename, File(obj_file), save=False)
+        else:
+            novo_grafico.obj3d = 'objetos3d/default.obj'
+
+        # Salvar o objeto no banco de dados
+        novo_grafico.save()
         
         # Criar registros dos valores do gráfico
         for x_val, y_val in zip(x_values_float, y_values_float):
@@ -253,7 +257,6 @@ def generate_graph(request):
         return JsonResponse({
             'success': True,
             'message': 'Gráfico gerado com sucesso',
-            'graph_3d_path': graph_3d_path,
             'graph_id': novo_grafico.id
         })
     
@@ -270,56 +273,35 @@ def download_graph_3d(request, graph_id):
         # Buscar o gráfico pelo ID e verificar se pertence ao usuário
         graph = grafico.objects.get(id=graph_id, user=request.user)
         
-        print(f'Gráfico encontrado: {graph.name}')
-        print(f'Caminho obj3d no banco: {graph.obj3d}')
-        print(f'Caminho obj3d.name: {graph.obj3d.name}')
-        
-        # Verificar se o arquivo 3D existe
+        # Verificar se o arquivo 3D existe no banco
         if not graph.obj3d:
-            print('Campo obj3d está vazio')
             raise Http404("Arquivo 3D não encontrado")
+        # Pega a URL pública original (com o código gigante)
+        file_url = graph.obj3d.url
         
-        # Tentar obter o caminho do arquivo
-        try:
-            file_path = graph.obj3d.path
-            print(f'Caminho completo do arquivo: {file_path}')
-        except Exception as e:
-            print(f'Erro ao obter path: {str(e)}')
-            raise Http404("Erro ao acessar o arquivo 3D")
-        
-        # Verificar se o arquivo existe no sistema de arquivos
-        if not os.path.exists(file_path):
-            print(f'Arquivo não existe no caminho: {file_path}')
-            raise Http404(f"Arquivo 3D não encontrado no servidor: {file_path}")
-        
-        print(f'Arquivo encontrado! Preparando download...')
-        
-        # Obter a extensão do arquivo
+        # Descobre a extensão original do arquivo (.stl ou .obj)
         file_extension = os.path.splitext(graph.obj3d.name)[1]
         
-        # Nome do arquivo para download (nome do gráfico + extensão)
-        download_filename = f"{graph.name}{file_extension}"
+        # Cria um nome limpo baseado apenas no nome que o utilizador escolheu
+        # Substituímos espaços por underlines para evitar problemas no download
+        safe_name = graph.name.replace(' ', '_')
+        download_filename = f"{safe_name}{file_extension}"
         
-        # Abrir o arquivo
-        file_handle = open(file_path, 'rb')
-        print(f'File handle opened for: {file_path}')
+        # Codifica o nome para garantir que acentos (ex: Gráfico_1) não quebram o link
+        encoded_filename = urllib.parse.quote(download_filename)
         
-        # Determinar o tipo MIME
-        content_type, _ = mimetypes.guess_type(file_path)
-        if content_type is None:
-            content_type = 'application/octet-stream'
-        print(f'Content type determined: {content_type}')
+        # O Supabase permite forçar um novo nome de ficheiro na hora de baixar
+        # adicionando o parâmetro ?download=novo_nome no final do link
+        if '?' in file_url:
+            final_url = f"{file_url}&download={encoded_filename}"
+        else:
+            final_url = f"{file_url}?download={encoded_filename}"
         
-        # Criar resposta de arquivo
-        response = FileResponse(file_handle, content_type=content_type)
-        response['Content-Disposition'] = f'attachment; filename="{download_filename}"'
-        print(f'Prepared FileResponse for download: {download_filename}')
-        
-        return response
+        # Com o Supabase Storage, redirecionamos direto para a URL da nuvem!
+        # Isso tira o peso do Vercel e usa a velocidade do Supabase
+        return redirect(final_url)
         
     except grafico.DoesNotExist:
-        print(f'Gráfico com ID {graph_id} não encontrado para o usuário')
         raise Http404("Gráfico não encontrado")
     except Exception as e:
-        print(f'Erro geral no download: {str(e)}')
-        raise Http404(f"Erro ao baixar arquivo: {str(e)}")
+        raise Http404(f"Erro ao acessar arquivo: {str(e)}")
