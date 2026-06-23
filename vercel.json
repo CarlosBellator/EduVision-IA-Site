@@ -5,9 +5,17 @@
       "src": "setup/wsgi.py",
       "use": "@vercel/python",
       "config": { "maxLambdaSize": "15mb" }
+    },
+    {
+      "src": "setup/static/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/setup/static/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "setup/wsgi.py"
