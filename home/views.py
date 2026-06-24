@@ -12,6 +12,7 @@ import shutil
 import mimetypes
 import base64
 import urllib.parse
+from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
 
 from contas.models import userProfile
 from home.EduVision_IA.main import import_img, cut_image, analise_grafico, recortarVariaveis
@@ -163,6 +164,19 @@ def process_graph_request(request):
             'variaveis': graph_values_dict
              
         })
+    except ResourceExhausted as e:
+        # Captura especificamente o limite de cota / excesso de requisições do Gemini
+        return JsonResponse({
+            'success': False,
+            'error': 'Estamos com muitas requisições. Nos ajude informando os valores manualmente ou tente novamente em alguns instantes.'
+        }, status=429)
+        
+    except GoogleAPIError as e:
+        # Captura outros erros de comunicação com a API do Google
+        return JsonResponse({
+            'success': False,
+            'error': 'Houve um erro na comunicação com a Inteligência Artificial. Tente novamente.'
+        }, status=502)
     
     except Exception as e:
         return JsonResponse({
