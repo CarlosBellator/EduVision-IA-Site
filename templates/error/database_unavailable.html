@@ -1,44 +1,23 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Banco indisponível</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background: #f4f7fb;
-        color: #1f2937;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        margin: 0;
-      }
-      .card {
-        max-width: 540px;
-        background: white;
-        border-radius: 14px;
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
-        padding: 32px;
-        text-align: center;
-      }
-      h1 {
-        font-size: 2rem;
-        margin-bottom: 12px;
-        color: #0f172a;
-      }
-      p {
-        margin: 0;
-        line-height: 1.6;
-        color: #475569;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <h1>Banco de dados indisponível</h1>
-      <p>{{ message }}</p>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco indisponível - EduVision IA</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'styles/style.css' %}">
+</head>
+<body class="error-page">
+    <div class="error-header">
+        <h1>EduVision</h1>
     </div>
-  </body>
+    
+    <div class="error-container">
+        <div class="error-icon"></div>
+        <h2>Banco de dados indisponível</h2>
+        <p>{{ message }}</p>
+        <button class="error-button" onclick="location.reload();">Tentar novamente</button>
+    </div>
+</body>
 </html>
